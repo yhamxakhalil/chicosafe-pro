@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Profile — Chico Safe{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>👤 My Profile</h1>
+  <p>Your account information and statistics.</p>
+</div>
+<div class="grid-2" style="max-width:800px;">
+  <div class="card">
+    <div style="text-align:center;padding:20px 0;">
+      <div style="width:80px;height:80px;background:linear-gradient(135deg,var(--rose),#c03060);border-radius:50%;
+        display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;margin:0 auto 16px;">
+        {{ current_user.display_name()[0] }}
+      </div>
+      <div style="font-size:22px;font-weight:700;">{{ current_user.display_name() }}</div>
+      <div style="color:var(--muted);font-size:14px;margin-top:4px;">{{ current_user.email }}</div>
+      <div style="margin-top:12px;">
+        {% if current_user.is_verified %}
+          <span style="background:rgba(46,204,113,.15);color:#27ae60;border:1px solid rgba(46,204,113,.3);
+            border-radius:99px;padding:4px 14px;font-size:12px;font-weight:700;">✅ Email Verified</span>
+        {% else %}
+          <span style="background:rgba(231,76,60,.1);color:#e74c3c;border:1px solid rgba(231,76,60,.3);
+            border-radius:99px;padding:4px 14px;font-size:12px;font-weight:700;">⚠️ Not Verified</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Account Details</div>
+    <div style="margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--muted);">Username</span>
+        <strong>{{ current_user.username }}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--muted);">Email</span>
+        <strong>{{ current_user.email }}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--muted);">Member Since</span>
+        <strong>{{ current_user.created_at.strftime('%d %b %Y') if current_user.created_at else 'N/A' }}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--muted);">Last Login</span>
+        <strong>{{ current_user.last_login.strftime('%d %b %Y, %H:%M') if current_user.last_login else 'N/A' }}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:14px;">
+        <span style="color:var(--muted);">Saved Passwords</span>
+        <strong style="color:var(--rose);">{{ count }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

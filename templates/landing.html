@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chico Safe — Secure Password Manager</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--rose:#e8547a;--rose-dark:#c03060;--rose-pale:#fce8ee;--bg:#fff8fa;--surface:#fff;--border:#f0d6dd;--text:#2a1520;--muted:#9b7080;}
+    [data-theme="dark"]{--rose:#e8547a;--rose-dark:#ff6b8a;--rose-pale:#2a0a14;--bg:#0d0008;--surface:#1a0010;--border:#3d0020;--text:#f5d0dd;--muted:#a06070;}
+    body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);transition:background .3s;}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:18px 60px;
+      background:var(--surface);border-bottom:1.5px solid var(--border);position:sticky;top:0;z-index:100;}
+    .nav-brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;text-decoration:none;color:var(--text);}
+    .nav-brand .icon{width:36px;height:36px;background:linear-gradient(135deg,var(--rose),#c03060);
+      border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;}
+    .nav-links{display:flex;align-items:center;gap:12px;}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:10px;
+      font-size:14px;font-weight:600;cursor:pointer;border:none;text-decoration:none;transition:all .18s;}
+    .btn-primary{background:linear-gradient(135deg,var(--rose),#c03060);color:#fff;box-shadow:0 4px 14px rgba(232,84,122,.35);}
+    .btn-primary:hover{transform:translateY(-1px);}
+    .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text);}
+    .btn-outline:hover{border-color:var(--rose);color:var(--rose);}
+    .theme-btn{background:none;border:1.5px solid var(--border);border-radius:8px;
+      padding:7px 12px;cursor:pointer;font-size:14px;color:var(--muted);}
+
+    /* Hero */
+    .hero{text-align:center;padding:100px 20px 80px;max-width:800px;margin:0 auto;}
+    .hero-badge{display:inline-flex;align-items:center;gap:6px;background:var(--rose-pale);
+      color:var(--rose-dark);border:1px solid var(--border);border-radius:99px;
+      padding:6px 16px;font-size:13px;font-weight:600;margin-bottom:24px;}
+    .hero h1{font-size:52px;font-weight:800;line-height:1.15;margin-bottom:20px;color:var(--text);}
+    .hero h1 span{background:linear-gradient(135deg,var(--rose),#c03060);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .hero p{font-size:18px;color:var(--muted);line-height:1.7;margin-bottom:36px;max-width:600px;margin-left:auto;margin-right:auto;}
+    .hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+    .hero-btns .btn{padding:14px 32px;font-size:16px;}
+
+    /* Features */
+    .features{padding:80px 60px;background:var(--surface);}
+    .features h2{text-align:center;font-size:32px;font-weight:700;margin-bottom:12px;}
+    .features .sub{text-align:center;color:var(--muted);font-size:16px;margin-bottom:50px;}
+    .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1000px;margin:0 auto;}
+    .feat-card{background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:28px 24px;}
+    .feat-icon{font-size:32px;margin-bottom:14px;}
+    .feat-card h3{font-size:17px;font-weight:700;margin-bottom:8px;}
+    .feat-card p{font-size:14px;color:var(--muted);line-height:1.6;}
+
+    /* Stats */
+    .stats{padding:60px 60px;text-align:center;}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:900px;margin:0 auto;}
+    .stat{padding:24px;}
+    .stat-num{font-size:40px;font-weight:800;color:var(--rose);margin-bottom:6px;}
+    .stat-lbl{font-size:14px;color:var(--muted);}
+
+    /* CTA */
+    .cta{padding:80px 20px;text-align:center;background:linear-gradient(135deg,var(--rose-pale),var(--bg));}
+    .cta h2{font-size:32px;font-weight:700;margin-bottom:14px;}
+    .cta p{color:var(--muted);font-size:16px;margin-bottom:32px;}
+
+    /* Footer */
+    footer{padding:24px 60px;border-top:1.5px solid var(--border);text-align:center;font-size:13px;color:var(--muted);}
+
+    @media(max-width:768px){
+      nav{padding:14px 20px;}
+      .hero{padding:60px 20px;}
+      .hero h1{font-size:34px;}
+      .features{padding:50px 20px;}
+      .feat-grid,.stats-grid{grid-template-columns:1fr 1fr;}
+      .stats{padding:40px 20px;}
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-brand" href="/"><div class="icon">🔐</div>Chico Safe</a>
+    <div class="nav-links">
+      <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
+      <a href="{{ url_for('login') }}" class="btn btn-outline">Sign In</a>
+      <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">🔐 Secure by Design</div>
+    <h1>Your Passwords,<br/><span>Protected & Organised</span></h1>
+    <p>Chico Safe is a free, intelligent password security system that analyses your passwords, generates strong ones, and stores them securely in your personal encrypted vault.</p>
+    <div class="hero-btns">
+      <a href="{{ url_for('register') }}" class="btn btn-primary">🚀 Create Free Account</a>
+      <a href="{{ url_for('about') }}" class="btn btn-outline">Learn More</a>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>Everything You Need</h2>
+    <p class="sub">One platform. Four powerful tools. Zero cost.</p>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <h3>Strength Analyzer</h3>
+        <p>Get real-time entropy-based analysis of any password with a clear rating from Very Weak to Very Strong, plus actionable tips to improve it.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚙️</div>
+        <h3>Password Generator</h3>
+        <p>Generate cryptographically secure random passwords with custom length and character sets. Save them directly to your vault in one click.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔒</div>
+        <h3>Encrypted Vault</h3>
+        <p>Store all your credentials safely using AES-128 Fernet encryption, uniquely keyed per user. No one else can see your passwords ever.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📧</div>
+        <h3>OTP Verification</h3>
+        <p>Accounts are protected by email-based One-Time Password verification, ensuring only you can activate and access your vault.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⏰</div>
+        <h3>Expiry Warnings</h3>
+        <p>Credentials older than 90 days are automatically flagged so you know when it is time to update a password.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🌙</div>
+        <h3>Light and Dark Mode</h3>
+        <p>Switch between a beautiful pink/rose light theme and a sleek black cherry dark theme. Your preference is saved automatically.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-num">AES-128</div><div class="stat-lbl">Encryption Standard</div></div>
+      <div class="stat"><div class="stat-num">100%</div><div class="stat-lbl">Free Forever</div></div>
+      <div class="stat"><div class="stat-num">0</div><div class="stat-lbl">Plain Text Stored</div></div>
+      <div class="stat"><div class="stat-num">10 min</div><div class="stat-lbl">OTP Validity Window</div></div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>Ready to Secure Your Passwords?</h2>
+    <p>Join Chico Safe today. It is free, secure, and takes less than a minute to set up.</p>
+    <a href="{{ url_for('register') }}" class="btn btn-primary" style="padding:14px 40px;font-size:16px;">Get Started Free</a>
+  </section>
+
+  <footer>© Yaqoub Hamza — Chico Safe. All rights reserved.</footer>
+
+  <script>
+    const saved = localStorage.getItem('cs-theme')||'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('theme-btn').textContent = saved==='dark'?'☀️':'🌙';
+    function toggleTheme(){
+      const curr = document.documentElement.getAttribute('data-theme');
+      const next = curr==='dark'?'light':'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('cs-theme', next);
+      document.getElementById('theme-btn').textContent = next==='dark'?'☀️':'🌙';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}My Vault — Chico Safe{% endblock %}
+{% block extra_head %}
+<style>
+.vault-table{width:100%;border-collapse:collapse;}
+.vault-table th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);padding:10px 14px;border-bottom:1.5px solid var(--border);}
+.vault-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.vault-table tr:last-child td{border-bottom:none;}
+.vault-table tr:hover td{background:var(--rose-pale);}
+.pw-hidden{font-family:monospace;letter-spacing:.15em;}
+.toggle-btn{background:none;border:none;cursor:pointer;font-size:15px;padding:2px 4px;}
+.copy-btn{background:none;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;
+  color:var(--muted);font-size:11px;padding:3px 8px;transition:all .15s;}
+.copy-btn:hover{border-color:var(--rose);color:var(--rose);background:var(--rose-pale);}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+.sort-btn{background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 10px;border-radius:6px;text-decoration:none;}
+.sort-btn.active{background:var(--rose-pale);color:var(--rose);font-weight:700;}
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🔒 My Vault</h1>
+  <p>Manage your encrypted credentials. Only you can see these.</p>
+</div>
+
+<!-- Add Form -->
+<div class="card" style="margin-bottom:22px;">
+  <div class="card-title">Add New Password</div>
+  <div class="card-sub">All fields are encrypted before saving.</div>
+  <form method="post" action="{{ url_for('vault_add') }}">
+    <div class="grid-2">
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Site / App Name *</label>
+        <input class="form-input" type="text" name="site" placeholder="e.g. Gmail, Netflix" required/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Username / Email</label>
+        <input class="form-input" type="text" name="site_username" placeholder="e.g. ibrahim@gmail.com"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Password *</label>
+        <div class="pw-wrap">
+          <input class="form-input" type="password" name="password" id="add-pw" placeholder="Enter password" required/>
+          <button type="button" class="pw-eye" onclick="togglePwVis('add-pw',this)">👁️</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">Notes</label>
+        <input class="form-input" type="text" name="notes" placeholder="e.g. School email, work account"/>
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit" style="margin-top:14px;">💾 Save Password</button>
+  </form>
+</div>
+
+<!-- Vault Table -->
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <div class="card-title">Saved Credentials</div>
+      <div style="font-size:13px;color:var(--muted);">{{ items|length }} password{% if items|length!=1 %}s{% endif %} stored</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--muted);">Sort:</span>
+      <a href="?sort=date{% if search %}&q={{ search }}{% endif %}" class="sort-btn {% if sort_by=='date' %}active{% endif %}">Date</a>
+      <a href="?sort=name{% if search %}&q={{ search }}{% endif %}" class="sort-btn {% if sort_by=='name' %}active{% endif %}">Name</a>
+      <a href="?sort=strength{% if search %}&q={{ search }}{% endif %}" class="sort-btn {% if sort_by=='strength' %}active{% endif %}">Strength</a>
+      <form method="get" style="display:flex;gap:6px;">
+        <input type="hidden" name="sort" value="{{ sort_by }}"/>
+        <input class="form-input" type="search" name="q" value="{{ search }}" placeholder="🔍 Search…" style="width:160px;padding:7px 12px;font-size:13px;"/>
+      </form>
+    </div>
+  </div>
+
+  {% if items %}
+  <div style="overflow-x:auto;">
+  <table class="vault-table">
+    <thead><tr>
+      <th>#</th><th>Site</th><th>Username</th><th>Password</th><th>Strength</th><th>Notes</th><th>Added</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for item in items %}
+    <tr {% if item.days_old >= 90 %}style="background:rgba(243,156,18,.04);"{% endif %}>
+      <td style="color:var(--muted);font-size:12px;">{{ loop.index }}</td>
+      <td>
+        <strong>{{ item.site }}</strong>
+        {% if item.days_old >= 90 %}<span style="background:rgba(243,156,18,.15);color:#d68910;border:1px solid rgba(243,156,18,.3);border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700;margin-left:4px;">⏰ Expired</span>{% endif %}
+        {% if item.is_duplicate %}<span style="background:rgba(231,76,60,.1);color:#e74c3c;border:1px solid rgba(231,76,60,.3);border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700;margin-left:4px;">⚠️ Duplicate</span>{% endif %}
+      </td>
+      <td style="color:var(--muted);font-size:12px;">{{ item.site_username or '—' }}</td>
+      <td>
+        <span class="pw-hidden" id="pw-{{ item.id }}">••••••••••</span>
+        <button class="toggle-btn" onclick="togglePw({{ item.id }},'{{ item.password }}',this)" title="Show/Hide">👁️</button>
+        <button class="copy-btn" onclick="copyPw('{{ item.password }}',this)">Copy</button>
+      </td>
+      <td><span style="background:{{ item.strength_color }}22;color:{{ item.strength_color }};border:1px solid {{ item.strength_color }}44;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;">{{ item.strength }}</span></td>
+      <td style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px;" title="{{ item.notes }}">{{ item.notes or '—' }}</td>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap;">{{ item.created_at }}</td>
+      <td style="display:flex;gap:6px;align-items:center;">
+        <a href="{{ url_for('vault_edit', eid=item.id) }}" class="btn btn-outline btn-sm" style="padding:5px 10px;">✏️</a>
+        <form method="post" action="{{ url_for('vault_delete', eid=item.id) }}" onsubmit="return confirm('Delete password for {{ item.site }}?')">
+          <button class="btn btn-danger btn-sm" type="submit" style="padding:5px 10px;">🗑️</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:44px;margin-bottom:12px;">🔒</div>
+    <p><strong>No credentials found</strong></p>
+    <p style="margin-top:6px;font-size:13px;">{% if search %}No results for "{{ search }}".{% else %}Add your first password using the form above.{% endif %}</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+const shown={};
+let hideTimers={};
+function togglePw(id,pw,btn){
+  const el=document.getElementById('pw-'+id);
+  shown[id]=!shown[id];
+  el.textContent=shown[id]?pw:'••••••••••';
+  btn.textContent=shown[id]?'🙈':'👁️';
+  clearTimeout(hideTimers[id]);
+  if(shown[id]){
+    hideTimers[id]=setTimeout(()=>{
+      shown[id]=false; el.textContent='••••••••••'; btn.textContent='👁️';
+    },10000);
+  }
+}
+function copyPw(pw,btn){
+  navigator.clipboard.writeText(pw).then(()=>{
+    const orig=btn.textContent; btn.textContent='✅';
+    btn.style.borderColor='var(--success)'; btn.style.color='var(--success)';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.borderColor=''; btn.style.color=''; },1500);
+  });
+}
+</script>
+{% endblock %}

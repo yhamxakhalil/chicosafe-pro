@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% block title %}Generator — Chico Safe{% endblock %}
+
+{% block extra_head %}
+<style>
+  .toggle-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--border); font-size:14px;
+  }
+  .toggle-row:last-child { border:none; }
+
+  .switch { position:relative; display:inline-block; width:44px; height:24px; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider {
+    position:absolute; cursor:pointer; inset:0;
+    background:#ddd; border-radius:24px; transition:.2s;
+  }
+  .slider::before {
+    content:''; position:absolute; width:18px; height:18px;
+    left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s;
+  }
+  input:checked + .slider { background:linear-gradient(135deg,var(--rose),var(--rose-dark)); }
+  input:checked + .slider::before { transform:translateX(20px); }
+
+  .pw-output {
+    font-family: 'Courier New', monospace;
+    font-size: 20px; font-weight: 700;
+    letter-spacing: .08em; color: var(--text);
+    word-break: break-all; line-height: 1.4;
+    min-height: 56px; display:flex; align-items:center;
+  }
+  .pw-placeholder { color:var(--muted); font-size:14px; font-style:italic; font-weight:400; }
+
+  .range-input {
+    -webkit-appearance:none; width:100%; height:6px;
+    border-radius:99px; outline:none;
+    background: linear-gradient(to right, var(--rose) 0%, var(--rose) var(--pct, 50%), var(--border) var(--pct,50%), var(--border) 100%);
+  }
+  .range-input::-webkit-slider-thumb {
+    -webkit-appearance:none; width:20px; height:20px;
+    border-radius:50%; background:var(--rose);
+    cursor:pointer; box-shadow:0 2px 8px rgba(232,84,122,.4);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>⚙️ Password Generator</h1>
+  <p>Create secure, cryptographically random passwords.</p>
+</div>
+
+<div class="grid-2">
+  <!-- Output -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div class="card">
+      <div class="card-title">Generated Password</div>
+      <div class="card-sub">Click generate to create a new password.</div>
+      <div class="pw-output" id="pw-out">
+        <span class="pw-placeholder">Click generate below…</span>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn btn-primary" onclick="generate()">🎲 Generate</button>
+        <button class="btn btn-outline" id="copy-btn" onclick="copyPw()" disabled>📋 Copy</button>
+      </div>
+      <!-- strength indicator -->
+      <div id="strength-row" style="margin-top:16px;display:none;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+          <span id="strength-lbl" style="font-weight:600;"></span>
+          <span style="color:var(--muted);">Entropy: <strong id="entropy"></strong> bits</span>
+        </div>
+        <div class="strength-bar-wrap">
+          <div class="strength-bar" id="strength-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save to vault -->
+    <div class="card" id="save-card" style="display:none;">
+      <div class="card-title">💾 Save to Vault</div>
+      <div class="card-sub">Name this password and store it securely.</div>
+      <form method="post" action="{{ url_for('vault_add') }}">
+        <input type="hidden" name="password" id="save-pw-field"/>
+        <div class="form-group">
+          <label class="form-label">Site / App Name</label>
+          <input class="form-input" type="text" name="site" placeholder="e.g. Netflix, Gmail, Jumia" required/>
+        </div>
+        <button class="btn btn-primary" type="submit">Save Password</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Config -->
+  <div class="card">
+    <div class="card-title">Configuration</div>
+    <div class="card-sub">Customise the password parameters.</div>
+
+    <div class="form-group">
+      <label class="form-label">
+        Length: <strong id="len-val">16</strong> characters
+      </label>
+      <input class="range-input" type="range" id="length" min="8" max="64" value="16"
+             oninput="updateLen(this.value)"/>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;">
+        <span>8</span><span>64</span>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <span>Uppercase (A-Z)</span>
+      <label class="switch"><input type="checkbox" id="upper" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Lowercase (a-z)</span>
+      <label class="switch"><input type="checkbox" id="lower" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Numbers (0-9)</span>
+      <label class="switch"><input type="checkbox" id="digits" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Symbols (!@#$%)</span>
+      <label class="switch"><input type="checkbox" id="symbols" checked><span class="slider"></span></label>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentPw = '';
+
+function updateLen(v) {
+  document.getElementById('len-val').textContent = v;
+  const pct = ((v - 8) / (64 - 8) * 100).toFixed(1);
+  document.getElementById('length').style.setProperty('--pct', pct + '%');
+}
+updateLen(16);
+
+async function generate() {
+  const body = {
+    length:  parseInt(document.getElementById('length').value),
+    upper:   document.getElementById('upper').checked,
+    lower:   document.getElementById('lower').checked,
+    digits:  document.getElementById('digits').checked,
+    symbols: document.getElementById('symbols').checked,
+  };
+  const res = await fetch('/api/generate', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const d = await res.json();
+  currentPw = d.password;
+
+  document.getElementById('pw-out').textContent = currentPw;
+  document.getElementById('copy-btn').disabled = false;
+
+  // Strength
+  const row = document.getElementById('strength-row');
+  row.style.display = 'block';
+  const lbl = document.getElementById('strength-lbl');
+  lbl.textContent  = d.strength;
+  lbl.style.color  = d.color;
+  document.getElementById('entropy').textContent    = d.entropy;
+  const bar = document.getElementById('strength-bar');
+  bar.style.width      = (d.score / d.max * 100) + '%';
+  bar.style.background = d.color;
+
+  // Save panel
+  document.getElementById('save-pw-field').value = currentPw;
+  document.getElementById('save-card').style.display = 'block';
+}
+
+function copyPw() {
+  if (!currentPw) return;
+  navigator.clipboard.writeText(currentPw).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy', 1500);
+  });
+}
+</script>
+{% endblock %}

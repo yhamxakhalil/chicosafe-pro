@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Register — Chico Safe{% endblock %}
+
+{% block auth_content %}
+<style>
+  .auth-wrap {
+    min-height:100vh; display:flex;
+    align-items:center; justify-content:center; padding:24px;
+    background: var(--bg);
+  }
+  .auth-card {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:20px; padding:40px 36px;
+    width:100%; max-width:420px; box-shadow:var(--shadow-lg);
+  }
+  .auth-logo { text-align:center; margin-bottom:28px; }
+  .auth-logo .icon-wrap {
+    width:60px; height:60px;
+    background:linear-gradient(135deg,var(--rose),#c03060);
+    border-radius:16px; display:inline-flex;
+    align-items:center; justify-content:center;
+    font-size:26px; margin-bottom:12px;
+    box-shadow:0 8px 24px rgba(232,84,122,.3);
+  }
+  .auth-logo h1 { font-size:24px; font-weight:700; color:var(--text); }
+  .auth-logo p { color:var(--muted); font-size:14px; margin-top:4px; }
+  .auth-footer { text-align:center; font-size:14px; color:var(--muted); margin-top:18px; }
+  .auth-footer a { color:var(--rose); font-weight:600; text-decoration:none; }
+  .auth-theme {
+    position:fixed; top:16px; right:16px;
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; color:var(--muted);
+    background:var(--surface); border:1.5px solid var(--border);
+    padding:6px 12px; border-radius:99px;
+  }
+  .toggle-switch { position:relative; width:36px; height:20px; cursor:pointer; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-track { position:absolute; inset:0; background:var(--border); border-radius:20px; transition:.2s; }
+  .toggle-track::before { content:''; position:absolute; width:14px; height:14px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+  input:checked + .toggle-track { background:var(--rose); }
+  input:checked + .toggle-track::before { transform:translateX(16px); }
+</style>
+
+<div class="auth-theme">
+  <span id="theme-label2">☀️</span>
+  <label class="toggle-switch">
+    <input type="checkbox" id="theme-switch2" onchange="toggleTheme(this)"/>
+    <span class="toggle-track"></span>
+  </label>
+</div>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="icon-wrap">🔐</div>
+      <h1>Create Account</h1>
+      <p>Join Chico Safe and secure your passwords</p>
+    </div>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" type="text" name="username" placeholder="Choose a username" required autofocus minlength="3"/>
+        <p class="form-hint">At least 3 characters</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-input" type="email" name="email" placeholder="you@example.com" required/>
+        <p class="form-hint">We'll send a verification code to this email</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="pw-field-wrap">
+          <input class="form-input" type="password" name="password" id="reg-pw" placeholder="Choose a strong password" required minlength="6"/>
+          <button type="button" class="pw-eye" onclick="togglePwVis('reg-pw', this)">👁️</button>
+        </div>
+        <p class="form-hint">At least 6 characters</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <div class="pw-field-wrap">
+          <input class="form-input" type="password" name="confirm" id="reg-confirm" placeholder="Repeat your password" required/>
+          <button type="button" class="pw-eye" onclick="togglePwVis('reg-confirm', this)">👁️</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;" type="submit">
+        🚀 Create Account
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  const saved = localStorage.getItem('cs-theme') || 'light';
+  applyTheme(saved);
+  const sw2 = document.getElementById('theme-switch2');
+  const lb2 = document.getElementById('theme-label2');
+  if (sw2) sw2.checked = saved === 'dark';
+  if (lb2) lb2.textContent = saved === 'dark' ? '🌙' : '☀️';
+
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('cs-theme', t);
+  }
+  function toggleTheme(sw) {
+    const t = sw.checked ? 'dark' : 'light';
+    applyTheme(t);
+    const lb = document.getElementById('theme-label2');
+    if (lb) lb.textContent = t === 'dark' ? '🌙' : '☀️';
+  }
+  function togglePwVis(id, btn) {
+    const el = document.getElementById(id);
+    if (el.type === 'password') { el.type = 'text'; btn.textContent = '🙈'; }
+    else { el.type = 'password'; btn.textContent = '👁️'; }
+  }
+</script>
+{% endblock %}

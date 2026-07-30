@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Analyzer — Chico Safe{% endblock %}
+
+{% block extra_head %}
+<style>
+  .check-row {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 0; border-bottom:1px solid var(--border);
+    font-size:14px;
+  }
+  .check-row:last-child { border:none; }
+  .check-icon { font-size:18px; width:24px; text-align:center; }
+  .tip-item {
+    display:flex; align-items:flex-start; gap:8px;
+    font-size:13px; color:#c0392b; margin-bottom:6px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📊 Strength Analyzer</h1>
+  <p>Test the cryptographic strength of any password.</p>
+</div>
+
+<div class="grid-2">
+  <!-- Input -->
+  <div class="card">
+    <div class="card-title">Input Password</div>
+    <div class="card-sub">Enter a password to instantly evaluate its strength.</div>
+    <div class="form-group">
+      <input class="form-input mono" type="text" id="pw-input"
+             placeholder="Type password to analyse…"
+             oninput="analyse(this.value)" autocomplete="off" spellcheck="false"/>
+    </div>
+    <div id="strength-label" style="font-size:22px;font-weight:700;margin-bottom:8px;">—</div>
+    <div class="strength-bar-wrap">
+      <div class="strength-bar" id="strength-bar" style="width:0%;background:var(--border);"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px;">
+      <span>Entropy: <strong id="entropy">—</strong> bits</span>
+      <span>Length: <strong id="length">—</strong> chars</span>
+    </div>
+  </div>
+
+  <!-- Checks -->
+  <div class="card">
+    <div class="card-title">Criteria Checklist</div>
+    <div class="card-sub">All criteria should be met for a strong password.</div>
+    <div id="checks">
+      <div class="check-row"><span class="check-icon">⬜</span> At least 8 characters</div>
+      <div class="check-row"><span class="check-icon">⬜</span> At least 12 characters</div>
+      <div class="check-row"><span class="check-icon">⬜</span> Uppercase letters (A-Z)</div>
+      <div class="check-row"><span class="check-icon">⬜</span> Lowercase letters (a-z)</div>
+      <div class="check-row"><span class="check-icon">⬜</span> Numbers (0-9)</div>
+      <div class="check-row"><span class="check-icon">⬜</span> Symbols (!@#$…)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tips -->
+<div class="card" style="margin-top:20px;" id="tips-card">
+  <div class="card-title">💡 Improvement Tips</div>
+  <div id="tips-list" style="margin-top:12px;color:var(--muted);font-size:14px;">
+    Start typing a password to see suggestions.
+  </div>
+</div>
+
+<!-- Weak → auto-generate prompt -->
+<div id="gen-prompt" class="card" style="margin-top:20px;display:none;border:1.5px solid var(--rose);background:var(--rose-pale);">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div class="card-title" style="color:var(--rose-dark);">⚠️ Password is Weak</div>
+      <p style="font-size:14px;color:var(--muted);">Do you want to auto-generate a strong password?</p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <a href="{{ url_for('generator') }}" class="btn btn-primary btn-sm">Yes, Generate One</a>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('gen-prompt').style.display='none'">No Thanks</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LABELS = ['At least 8 characters','At least 12 characters','Uppercase letters (A-Z)',
+                'Lowercase letters (a-z)','Numbers (0-9)','Symbols (!@#$…)'];
+
+async function analyse(pw) {
+  if (!pw) { reset(); return; }
+  const res  = await fetch('/api/analyze', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({password: pw})
+  });
+  const d = await res.json();
+
+  // Strength label
+  const lbl = document.getElementById('strength-label');
+  lbl.textContent = d.strength;
+  lbl.style.color = d.color;
+
+  // Bar
+  const bar = document.getElementById('strength-bar');
+  bar.style.width  = (d.score / d.max * 100) + '%';
+  bar.style.background = d.color;
+
+  // Entropy / length
+  document.getElementById('entropy').textContent = d.entropy;
+  document.getElementById('length').textContent  = d.length;
+
+  // Checks
+  const passed = [d.length>=8, d.length>=12, d.has_upper, d.has_lower, d.has_digit, d.has_symbol];
+  const rows   = document.querySelectorAll('#checks .check-row');
+  rows.forEach((r,i) => {
+    r.querySelector('.check-icon').textContent = passed[i] ? '✅' : '❌';
+  });
+
+  // Tips
+  const tipsList = document.getElementById('tips-list');
+  if (d.tips.length) {
+    tipsList.innerHTML = d.tips.map(t =>
+      `<div class="tip-item"><span>⚠️</span>${t}</div>`).join('');
+  } else {
+    tipsList.innerHTML = '<span style="color:var(--success);font-weight:600;">✅ Great password! All criteria met.</span>';
+  }
+
+  // Weak prompt
+  const weak = ['Very Weak','Weak'];
+  document.getElementById('gen-prompt').style.display = weak.includes(d.strength) ? 'block' : 'none';
+}
+
+function reset() {
+  document.getElementById('strength-label').textContent = '—';
+  document.getElementById('strength-label').style.color = '';
+  document.getElementById('strength-bar').style.width   = '0%';
+  document.getElementById('entropy').textContent = '—';
+  document.getElementById('length').textContent  = '—';
+  document.querySelectorAll('#checks .check-row .check-icon').forEach(el => el.textContent = '⬜');
+  document.getElementById('tips-list').innerHTML = 'Start typing a password to see suggestions.';
+  document.getElementById('gen-prompt').style.display = 'none';
+}
+</script>
+{% endblock %}

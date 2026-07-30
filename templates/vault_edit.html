@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Edit Credential — Chico Safe{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>✏️ Edit Credential</h1>
+  <p>Update the details for this saved password.</p>
+</div>
+<div class="card" style="max-width:600px;">
+  <form method="post">
+    <div class="form-group">
+      <label class="form-label">Site / App Name *</label>
+      <input class="form-input" type="text" name="site" value="{{ entry.site_name }}" required/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Username / Email</label>
+      <input class="form-input" type="text" name="site_username" value="{{ entry.site_username or '' }}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <div class="pw-wrap">
+        <input class="form-input" type="password" name="password" id="edit-pw" value="{{ password }}" placeholder="Leave blank to keep current"/>
+        <button type="button" class="pw-eye" onclick="togglePwVis('edit-pw',this)">👁️</button>
+      </div>
+      <p class="form-hint">Leave blank to keep the existing password unchanged.</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <input class="form-input" type="text" name="notes" value="{{ entry.notes or '' }}" placeholder="Optional notes"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-primary" type="submit">💾 Save Changes</button>
+      <a href="{{ url_for('vault') }}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Verify Email — Chico Safe{% endblock %}
+
+{% block auth_content %}
+<style>
+  .auth-wrap {
+    min-height:100vh; display:flex;
+    align-items:center; justify-content:center; padding:24px;
+    background: var(--bg);
+  }
+  .auth-card {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:20px; padding:40px 36px;
+    width:100%; max-width:420px; box-shadow:var(--shadow-lg);
+  }
+  .auth-logo { text-align:center; margin-bottom:24px; }
+  .auth-logo .icon-wrap {
+    width:60px; height:60px;
+    background:linear-gradient(135deg,var(--rose),#c03060);
+    border-radius:16px; display:inline-flex;
+    align-items:center; justify-content:center;
+    font-size:26px; margin-bottom:12px;
+    box-shadow:0 8px 24px rgba(232,84,122,.3);
+  }
+  .auth-logo h1 { font-size:22px; font-weight:700; color:var(--text); }
+  .auth-logo p { color:var(--muted); font-size:13px; margin-top:6px; line-height:1.5; }
+  .auth-logo .email-highlight { color:var(--rose); font-weight:600; }
+  .otp-input {
+    text-align:center; font-size:28px; letter-spacing:0.5em;
+    font-family:'Courier New', monospace; padding:14px 10px 14px 24px;
+  }
+  .auth-footer { text-align:center; font-size:13px; color:var(--muted); margin-top:18px; }
+  .auth-footer button {
+    background:none; border:none; color:var(--rose); font-weight:600;
+    cursor:pointer; font-size:13px; text-decoration:underline; padding:0;
+  }
+  .auth-theme {
+    position:fixed; top:16px; right:16px;
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; color:var(--muted);
+    background:var(--surface); border:1.5px solid var(--border);
+    padding:6px 12px; border-radius:99px;
+  }
+  .toggle-switch { position:relative; width:36px; height:20px; cursor:pointer; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-track { position:absolute; inset:0; background:var(--border); border-radius:20px; transition:.2s; }
+  .toggle-track::before { content:''; position:absolute; width:14px; height:14px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+  input:checked + .toggle-track { background:var(--rose); }
+  input:checked + .toggle-track::before { transform:translateX(16px); }
+</style>
+
+<div class="auth-theme">
+  <span id="theme-label2">☀️</span>
+  <label class="toggle-switch">
+    <input type="checkbox" id="theme-switch2" onchange="toggleTheme(this)"/>
+    <span class="toggle-track"></span>
+  </label>
+</div>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="icon-wrap">📧</div>
+      <h1>Verify Your Email</h1>
+      <p>We've sent a 6-digit verification code to<br/><span class="email-highlight">{{ email }}</span></p>
+    </div>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post">
+      <div class="form-group">
+        <label class="form-label">Enter Verification Code</label>
+        <input class="form-input otp-input" type="text" name="otp" placeholder="000000"
+               maxlength="6" pattern="\d{6}" inputmode="numeric" required autofocus/>
+        <p class="form-hint" style="text-align:center;">Code expires in 10 minutes</p>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;" type="submit">
+        ✅ Verify Email
+      </button>
+    </form>
+
+    <form method="post" action="{{ url_for('resend_otp') }}">
+      <p class="auth-footer">
+        Didn't receive the code? <button type="submit">Resend Code</button>
+      </p>
+    </form>
+  </div>
+</div>
+
+<script>
+  const saved = localStorage.getItem('cs-theme') || 'light';
+  applyTheme(saved);
+  const sw2 = document.getElementById('theme-switch2');
+  const lb2 = document.getElementById('theme-label2');
+  if (sw2) sw2.checked = saved === 'dark';
+  if (lb2) lb2.textContent = saved === 'dark' ? '🌙' : '☀️';
+
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('cs-theme', t);
+  }
+  function toggleTheme(sw) {
+    const t = sw.checked ? 'dark' : 'light';
+    applyTheme(t);
+    const lb = document.getElementById('theme-label2');
+    if (lb) lb.textContent = t === 'dark' ? '🌙' : '☀️';
+  }
+
+  // Auto-submit when 6 digits entered
+  document.querySelector('.otp-input').addEventListener('input', function(e) {
+    if (e.target.value.length === 6) {
+      e.target.form.submit();
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>404 — Page Not Found | Chico Safe</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--rose:#e8547a;--rose-dark:#c03060;--rose-pale:#fce8ee;--bg:#fff8fa;--text:#2a1520;--muted:#9b7080;}
+[data-theme="dark"]{--bg:#0d0008;--text:#f5d0dd;--muted:#a06070;--rose-pale:#2a0a14;}
+body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;}
+.wrap{max-width:480px;}
+.num{font-size:120px;font-weight:800;background:linear-gradient(135deg,var(--rose),var(--rose-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+h1{font-size:24px;margin:16px 0 10px;}
+p{color:var(--muted);font-size:15px;margin-bottom:28px;}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="num">404</div>
+  <h1>Page Not Found</h1>
+  <p>The page you are looking for does not exist or has been moved.</p>
+  <a href="/" class="btn">🏠 Go Home</a>
+</div>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('cs-theme')||'light');</script>
+</body></html>
