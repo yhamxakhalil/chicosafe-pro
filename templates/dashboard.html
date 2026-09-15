@@ -1,11 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard — Chico Safe{% endblock %}
-{% block extra_head %}
-<style>
-.stat-big{font-size:44px;font-weight:700;color:var(--rose);}
-.strength-dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;}
-</style>
-{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <h1>Welcome back, {{ current_user.display_name() }} 👋</h1>
@@ -13,26 +8,28 @@
 </div>
 
 {% if expired > 0 %}
-<div style="background:rgba(243,156,18,.1);color:#d68910;border:1.5px solid rgba(243,156,18,.3);
-  border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-  <span>⏰ <strong>{{ expired }} password{% if expired > 1 %}s are{% else %} is{% endif %} older than 90 days.</strong> Consider updating them.</span>
-  <a href="{{ url_for('vault') }}" style="color:#d68910;font-weight:700;text-decoration:none;">View Vault →</a>
+<div class="alert" style="background:rgba(243,156,18,.12);color:#d68910;border:1.5px solid rgba(243,156,18,.3);margin-bottom:20px;">
+  ⏰ <strong>{{ expired }} password{% if expired > 1 %}s are{% else %} is{% endif %} older than 90 days.</strong>
+  Consider updating them for better security.
+  <a href="{{ url_for('vault') }}" style="color:#d68910;font-weight:700;margin-left:8px;">View Vault →</a>
 </div>
 {% endif %}
 
 <div class="grid-3" style="margin-bottom:20px;">
   <div class="card" style="border-top:4px solid var(--rose);">
-    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Vault Status</div>
-    <div class="stat-big">{{ count }}</div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase;">Vault Status</div>
+    <div style="font-size:44px;font-weight:700;color:var(--rose);">{{ count }}</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Credentials stored</div>
     <a href="{{ url_for('vault') }}" class="btn btn-outline btn-sm">Manage Vault →</a>
   </div>
+
   <div class="card">
     <div style="font-size:26px;margin-bottom:10px;">⚙️</div>
     <div class="card-title">Password Generator</div>
     <div class="card-sub">Create highly secure, randomised passwords for your accounts.</div>
     <a href="{{ url_for('generator') }}" class="btn btn-primary btn-sm">Open Generator</a>
   </div>
+
   <div class="card">
     <div style="font-size:26px;margin-bottom:10px;">📊</div>
     <div class="card-title">Strength Analyzer</div>
@@ -41,59 +38,13 @@
   </div>
 </div>
 
-<div class="grid-2" style="margin-bottom:20px;">
-  <!-- Vault Strength Overview -->
-  <div class="card">
-    <div class="card-title">📈 Vault Strength Overview</div>
-    <div class="card-sub">Breakdown of your stored passwords by strength.</div>
-    {% if count > 0 %}
-    {% set colors = {'Very Weak':'#e74c3c','Weak':'#e67e22','Fair':'#f1c40f','Strong':'#2ecc71','Very Strong':'#27ae60'} %}
-    {% for label, val in strengths.items() %}
-    <div style="margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span><span class="strength-dot" style="background:{{ colors[label] }};"></span>{{ label }}</span>
-        <strong>{{ val }}</strong>
-      </div>
-      <div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden;">
-        <div style="height:100%;width:{{ (val/count*100)|int }}%;background:{{ colors[label] }};border-radius:99px;"></div>
-      </div>
-    </div>
-    {% endfor %}
-    {% else %}
-    <p style="color:var(--muted);font-size:14px;">No passwords saved yet. <a href="{{ url_for('vault') }}" style="color:var(--rose);">Add one now.</a></p>
-    {% endif %}
-  </div>
-
-  <!-- Quick Tips -->
-  <div class="card">
-    <div class="card-title">💡 Quick Security Tips</div>
-    <div style="margin-top:12px;">
-      {% set tips = [
-        ('Use 12+ characters','Longer passwords are exponentially harder to crack.'),
-        ('Never reuse passwords','One breach can compromise all your accounts.'),
-        ('Use symbols and numbers','They significantly increase password entropy.'),
-        ('Update old passwords','Passwords older than 90 days should be refreshed.'),
-        ('Use the generator','Let Chico Safe create truly random passwords for you.'),
-      ] %}
-      {% for title, desc in tips %}
-      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <span style="color:var(--rose);font-size:16px;margin-top:1px;">✓</span>
-        <div>
-          <div style="font-size:13px;font-weight:600;">{{ title }}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px;">{{ desc }}</div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-
 <div class="card" style="display:flex;align-items:flex-start;gap:14px;border-left:4px solid var(--success);">
   <div style="font-size:26px;">🛡️</div>
   <div>
     <div class="card-title" style="color:var(--success);">End-to-End Encryption Enabled</div>
     <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:4px;">
-      All passwords are encrypted with <strong>Fernet (AES-128)</strong> using a unique key tied to your account. Your master password is never stored in plain text.
+      All passwords are encrypted with <strong>Fernet (AES-128-CBC)</strong> using a unique key tied to your account.
+      Your master password is never stored in plain text.
     </p>
   </div>
 </div>

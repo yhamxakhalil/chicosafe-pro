@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, flash, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,26 +7,31 @@ from flask_mail import Mail, Message
 from datetime import datetime, timezone, timedelta
 import os, secrets, string, math, re
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chicosafe.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Mail config
 app.config['MAIL_SERVER']         = 'smtp.gmail.com'
 app.config['MAIL_PORT']           = 587
 app.config['MAIL_USE_TLS']        = True
-app.config['MAIL_USERNAME']       = os.environ.get('MAIL_USERNAME', 'chicosafe.noreply@gmail.com')
+app.config['MAIL_USERNAME']       = os.environ.get('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD']       = os.environ.get('MAIL_APP_PASSWORD', '')
-app.config['MAIL_DEFAULT_SENDER'] = ('Chico Safe', os.environ.get('MAIL_USERNAME', 'chicosafe.noreply@gmail.com'))
+app.config['MAIL_DEFAULT_SENDER'] = ('Chico Safe', os.environ.get('MAIL_USERNAME', ''))
 
-db         = SQLAlchemy(app)
-mail       = Mail(app)
-login_mgr  = LoginManager(app)
+db        = SQLAlchemy(app)
+mail      = Mail(app)
+login_mgr = LoginManager(app)
 login_mgr.login_view    = 'login'
 login_mgr.login_message = 'Please log in to access this page.'
 
-# ── Models ────────────────────────────────────────────────────────────────────
+# Models
 class User(UserMixin, db.Model):
     id            = db.Column(db.Integer, primary_key=True)
     username      = db.Column(db.String(80), unique=True, nullable=False)
@@ -78,7 +83,8 @@ class SavedPassword(db.Model):
 @login_mgr.user_loader
 def load_user(uid): return db.session.get(User, int(uid))
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+
+# Helpers
 def analyze_password(pw):
     length     = len(pw)
     has_upper  = bool(re.search(r'[A-Z]', pw))
@@ -120,7 +126,7 @@ def generate_password(length=16, upper=True, lower=True, digits=True, symbols=Tr
         sym = '!@#$%^&*'; chars += sym; required.append(secrets.choice(sym))
     if not chars: chars = string.ascii_letters + string.digits
     rest = [secrets.choice(chars) for _ in range(length - len(required))]
-    pw   = required + rest
+    pw = required + rest
     secrets.SystemRandom().shuffle(pw)
     return ''.join(pw)
 
@@ -128,31 +134,31 @@ def generate_password(length=16, upper=True, lower=True, digits=True, symbols=Tr
 def send_otp(user):
     code = user.generate_otp()
     db.session.commit()
-    # Try real email first, fall back to console
+    # Load HTML email template
     try:
+        with open(os.path.join(app.root_path, 'templates', 'email_otp.html'), 'r', encoding='utf-8') as f:
+            html_body = f.read()
+        html_body = html_body.replace('{{username}}', user.display_name())
+        html_body = html_body.replace('{{otp_code}}', code)
+
         msg = Message(
             subject='Your Chico Safe Verification Code',
             recipients=[user.email],
-            body=f"""Hello {user.display_name()},
-
-Your Chico Safe verification code is: {code}
-
-This code expires in 10 minutes.
-
-If you did not request this, please ignore this email.
-
-Chico Safe Security Team"""
+            html=html_body,
+            body=f"Hello {user.display_name()},\n\nYour Chico Safe verification code is: {code}\n\nThis code expires in 10 minutes.\n\nIf you did not create a Chico Safe account, please ignore this email.\n\nChico Safe Security Team"
         )
         mail.send(msg)
-        print(f"\n[OTP] Code {code} sent to {user.email}")
+        print(f"\n[OTP SENT] Code {code} dispatched to {user.email}")
+        return True
     except Exception as e:
         print(f"\n{'='*50}")
         print(f"  OTP for {user.email}: {code}")
         print(f"  (Email failed: {e})")
         print(f"{'='*50}\n")
-    return True
+        return True
 
-# ── Auth Routes ───────────────────────────────────────────────────────────────
+
+# Auth Routes
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -237,7 +243,7 @@ def login():
             if not user.is_verified:
                 session['pending_user_id'] = user.id
                 send_otp(user)
-                flash('Please verify your email first. A new code has been sent.', 'info')
+                flash('Please verify your email first. A new code has been sent to your email.', 'info')
                 return redirect(url_for('verify_otp'))
             user.last_login = datetime.now(timezone.utc)
             db.session.commit()
@@ -254,14 +260,15 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-# ── App Routes ────────────────────────────────────────────────────────────────
+
+# App Routes
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    entries  = SavedPassword.query.filter_by(user_id=current_user.id).all()
-    count    = len(entries)
-    expired  = sum(1 for e in entries if e.days_old() >= 90)
-    f        = current_user.get_fernet()
+    entries   = SavedPassword.query.filter_by(user_id=current_user.id).all()
+    count     = len(entries)
+    expired   = sum(1 for e in entries if e.days_old() >= 90)
+    f         = current_user.get_fernet()
     strengths = {'Very Weak':0,'Weak':0,'Fair':0,'Strong':0,'Very Strong':0}
     for e in entries:
         try:
@@ -282,12 +289,12 @@ def profile():
 @app.route('/vault')
 @login_required
 def vault():
-    sort_by  = request.args.get('sort', 'date')
-    search   = request.args.get('q', '').strip().lower()
-    entries  = SavedPassword.query.filter_by(user_id=current_user.id).all()
-    f        = current_user.get_fernet()
-    all_pws  = []
-    items    = []
+    sort_by = request.args.get('sort', 'date')
+    search  = request.args.get('q', '').strip().lower()
+    entries = SavedPassword.query.filter_by(user_id=current_user.id).all()
+    f       = current_user.get_fernet()
+    all_pws = []
+    items   = []
     for e in entries:
         pw = e.decrypt(f)
         all_pws.append(pw)
@@ -348,7 +355,7 @@ def vault_edit(eid):
         if pw:
             entry.encrypted = f.encrypt(pw.encode()).decode()
         db.session.commit()
-        flash(f'Credential updated.', 'success')
+        flash('Credential updated.', 'success')
         return redirect(url_for('vault'))
     return render_template('vault_edit.html', entry=entry, password=entry.decrypt(f))
 
