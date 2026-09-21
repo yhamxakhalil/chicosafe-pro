@@ -4,6 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from cryptography.fernet import Fernet
 from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from datetime import datetime, timezone, timedelta
 import os, secrets, string, math, re
 
@@ -260,6 +261,84 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
+
+# ââ Password Reset Routes âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+def get_reset_serializer():
+    return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+
+def send_reset_email(user):
+    s         = get_reset_serializer()
+    token     = s.dumps(user.email, salt='password-reset-salt')
+    # Built from the current request host, so it works locally and in production
+    reset_url = url_for('reset_password', token=token, _external=True)
+    try:
+        with open(os.path.join(app.root_path, 'templates', 'email_reset.html'), 'r', encoding='utf-8') as f:
+            html_body = f.read()
+        html_body = html_body.replace('{{username}}', user.display_name())
+        html_body = html_body.replace('{{reset_url}}', reset_url)
+        msg = Message(
+            subject='Reset Your Chico Safe Password',
+            recipients=[user.email],
+            html=html_body,
+            body=f"Hello {user.display_name()},\n\nClick the link below to reset your password:\n{reset_url}\n\nThis link expires in 30 minutes.\n\nIf you did not request this, please ignore this email.\n\nChico Safe Security Team"
+        )
+        mail.send(msg)
+        print(f"\n[RESET EMAIL] Link sent to {user.email}")
+        print(f"[RESET LINK]  {reset_url}\n")
+    except Exception as e:
+        print(f"\n[RESET LINK for {user.email}]: {reset_url}")
+        print(f"(Email failed: {e})\n")
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user  = User.query.filter_by(email=email).first()
+        # Always show success message to prevent email enumeration
+        flash('If an account with that email exists, a password reset link has been sent.', 'success')
+        if user and user.is_verified:
+            send_reset_email(user)
+        return redirect(url_for('forgot_password'))
+    return render_template('forgot_password.html')
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    s = get_reset_serializer()
+    try:
+        email = s.loads(token, salt='password-reset-salt', max_age=1800)  # 30 min
+    except SignatureExpired:
+        flash('The reset link has expired. Please request a new one.', 'error')
+        return redirect(url_for('forgot_password'))
+    except BadSignature:
+        flash('The reset link is invalid. Please request a new one.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('Account not found.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm  = request.form.get('confirm', '')
+        if len(password) < 6:
+            flash('Password must be at least 6 characters.', 'error')
+        elif password != confirm:
+            flash('Passwords do not match.', 'error')
+        else:
+            user.set_password(password)
+            db.session.commit()
+            flash('Your password has been reset successfully. You can now log in.', 'success')
+            return redirect(url_for('login'))
+    return render_template('reset_password.html', token=token)
 
 
 # App Routes
